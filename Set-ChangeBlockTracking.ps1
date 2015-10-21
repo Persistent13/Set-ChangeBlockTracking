@@ -2,28 +2,29 @@
 {
     <#
     .Synopsis
-       Enables change block tracking on a list of VMs.
+       Enables change block tracking on a list of virtual machines.
     .DESCRIPTION
-       Enables change block tracking on a list of VMs and then stuns/un-stuns the VM with a snapshot to apply the change.
+       Enables change block tracking on a list of virtual machines and then stuns/un-stuns the virtual machines
+       with a snapshot to apply the change.
     .EXAMPLE
-       Enable-ChangeBlockTracking -VM 2012r2
+       Set-ChangeBlockTracking -VM 2012r2
 
        This command will enable change block tracking for all disks attached to the virutal machine and then take a
        snapshot and remove it immediately after in order to apply the configuration changes during the stun period.
     .EXAMPLE
-       PS C:\>Enable-ChangeBlockTracking -VM 2012r2, "ubuntu 15.04"
+       PS C:\>Set-ChangeBlockTracking -VM 2012r2, "ubuntu 15.04", srv-ad03
 
        This command will enable change block tracking for the list of virtual machines.
-       An string array variable may be used as well.
+       An string variable may be used as well.
     .EXAMPLE
-       PS C:\>Enable-ChangeBlockTracking -VM 2012r2, "ubuntu 15.04" -ChangeTrackingEnable:$false
+       PS C:\>Set-ChangeBlockTracking -VM srv-ad* -ChangeTrackingEnable:$false
 
-       This command will disable change block tracking for the list of virtual machines.
-       A value of $true is default and will enable change block tracking.
+       This command will disable change block tracking for all virtual machines that start with the name srv-ad.
+       A value of $true is default and will enable change block tracking, $false will disable change block tracking.
     .INPUTS
        System.String
 
-            You can pipe a string the contains a virtual machine name to Enable-ChangeBlockTracking
+            You can pipe a string the contains a virtual machine name to Set-ChangeBlockTracking.
     .OUTPUTS
        None
     .NOTES
@@ -72,7 +73,7 @@
                 Get-Snapshot -VM $workingVM.Name -Name $snapshotName | Remove-Snapshot -Confirm:$false
                 if(-not (Get-VM -Name $targetVM | Get-View).Config.ChangeTrackingEnabled -and $ChangeTrackingEnable)
                 {
-                    Write-Warning "Unable to set change block tracking for $targetVM."
+                    Write-Warning "Unable to change the change block tracking setting for $targetVM."
                 }
             }
             catch
