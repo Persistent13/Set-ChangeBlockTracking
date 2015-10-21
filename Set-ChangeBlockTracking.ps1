@@ -1,4 +1,4 @@
-﻿function Enable-ChangeBlockTracking
+﻿function Set-ChangeBlockTracking
 {
     <#
     .Synopsis
@@ -13,8 +13,13 @@
     .EXAMPLE
        PS C:\>Enable-ChangeBlockTracking -VM 2012r2, "ubuntu 15.04"
 
-       This command will enable change block tracking on the list of virtual machines.
-       An string array may be used as well.
+       This command will enable change block tracking for the list of virtual machines.
+       An string array variable may be used as well.
+    .EXAMPLE
+       PS C:\>Enable-ChangeBlockTracking -VM 2012r2, "ubuntu 15.04" -ChangeTrackingEnable:$false
+
+       This command will disable change block tracking for the list of virtual machines.
+       A value of $true is default and will enable change block tracking.
     .INPUTS
        System.String
 
@@ -33,15 +38,26 @@
     (
         # Name of the virtual machines.
         [Parameter(Mandatory=$true,
+                   ValueFromPipeline=$true,
                    ValueFromPipelineByPropertyName=$true,
+                   ValueFromRemainingArguments=$false,
                    Position=0)]
-        [String[]]$Name
+        [ValidateNotNull()]
+        [ValidateNotNullOrEmpty()]
+        [String[]]$Name,
+        # Whether to enable or disable change tracking.
+        [Parameter(Mandatory=$false,
+                   ValueFromPipeline=$false,
+                   Position=1)]
+        [ValidateNotNull()]
+        [ValidateNotNullOrEmpty()]
+        [Bool]$ChangeTrackingEnable = $true
     )
 
     Begin
     {
         $vmConfig = New-Object VMware.Vim.VirtualMachineConfigSpec
-        $vmConfig.ChangeTrackingEnabled = $true
+        $vmConfig.ChangeTrackingEnabled = $ChangeTrackingEnable
     }
     Process
     {
@@ -52,8 +68,12 @@
                 $workingVM = Get-VM -Name $targetVM -ErrorAction Stop | Get-View
                 $workingVM.ReconfigVM($vmConfig)
                 $snapshotName = "cbt-$(Get-Date -Format o)"
-                New-Snapshot -VM $workingVM.Name -Name $snapshotName | Out-Null
+                New-Snapshot -VM $workingVM.Name -Name $snapshotName -WarningAction Ignore | Out-Null
                 Get-Snapshot -VM $workingVM.Name -Name $snapshotName | Remove-Snapshot -Confirm:$false
+                if(-not (Get-VM -Name $targetVM | Get-View).Config.ChangeTrackingEnabled -and $ChangeTrackingEnable)
+                {
+                    Write-Warning "Unable to set change block tracking for $targetVM."
+                }
             }
             catch
             {
@@ -63,6 +83,5 @@
     }
     End
     {
-        Write-Verbose "the end."
     }
 }
