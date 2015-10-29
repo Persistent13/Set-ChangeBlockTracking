@@ -34,6 +34,7 @@
     [CmdletBinding()]
     [Alias()]
     [OutputType()]
+    #Requires -Version 3
     #Requires -Modules VMware.VimAutomation.Core
     Param
     (
@@ -52,11 +53,16 @@
                    Position=1)]
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
-        [Bool]$ChangeTrackingEnable = $true
+        [Bool]$ChangeTrackingEnable
     )
 
     Begin
     {
+        if(-not (Get-Module vmware.*))
+        {
+            Write-Host 'PowerCLI 6+ must be installed to use this cmdlet.'
+            exit 1
+        }
         $vmConfig = New-Object VMware.Vim.VirtualMachineConfigSpec
         $vmConfig.ChangeTrackingEnabled = $ChangeTrackingEnable
     }
