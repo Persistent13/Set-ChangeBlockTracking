@@ -60,8 +60,7 @@
     {
         if(-not (Get-Module vmware.*))
         {
-            Write-Host 'PowerCLI 6+ must be installed to use this cmdlet.'
-            exit 1
+            throw 'PowerCLI 6+ must be installed to use this cmdlet.'
         }
         $vmConfig = New-Object VMware.Vim.VirtualMachineConfigSpec
         $vmConfig.ChangeTrackingEnabled = $ChangeTrackingEnable
