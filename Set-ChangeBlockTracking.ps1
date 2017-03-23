@@ -32,10 +32,6 @@
        E.G. cbt-2015-10-21T14:23:50.6819207-07:00
     #>
     [CmdletBinding()]
-    [Alias()]
-    [OutputType()]
-    #Requires -Version 3
-    #Requires -Modules VMware.VimAutomation.Core
     Param
     (
         # Name of the virtual machines.
@@ -58,10 +54,7 @@
 
     Begin
     {
-        if(-not (Get-Module vmware.*))
-        {
-            throw 'PowerCLI 6+ must be installed to use this cmdlet.'
-        }
+        if(-not (Get-Module vmware.*)){ throw 'PowerCLI 6+ must be installed to use this cmdlet.' }
         $vmConfig = New-Object VMware.Vim.VirtualMachineConfigSpec
         $vmConfig.ChangeTrackingEnabled = $ChangeTrackingEnable
     }
@@ -74,7 +67,7 @@
                 $workingVM = Get-VM -Name $targetVM -ErrorAction Stop | Get-View
                 $workingVM.ReconfigVM($vmConfig)
                 $snapshotName = "cbt-$(Get-Date -Format o)"
-                New-Snapshot -VM $workingVM.Name -Name $snapshotName -WarningAction Ignore | Out-Null
+                New-Snapshot -VM $workingVM.Name -Name $snapshotName | Out-Null
                 Get-Snapshot -VM $workingVM.Name -Name $snapshotName | Remove-Snapshot -Confirm:$false
                 if(-not (Get-VM -Name $targetVM | Get-View).Config.ChangeTrackingEnabled -and $ChangeTrackingEnable)
                 {
@@ -86,8 +79,5 @@
                 Write-Warning "Could not find the virtual machine $targetVM."
             }
         }
-    }
-    End
-    {
     }
 }
