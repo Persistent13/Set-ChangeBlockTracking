@@ -1,5 +1,4 @@
-﻿function Set-ChangeBlockTracking
-{
+﻿function Set-ChangeBlockTracking {
     <#
     .Synopsis
        Enables change block tracking on a list of virtual machines.
@@ -28,55 +27,46 @@
     .OUTPUTS
        None
     .NOTES
-       Snapshots created by the cmdlet are prefixed with cbt- and end with a timestamp.
-       E.G. cbt-2015-10-21T14:23:50.6819207-07:00
+       Snapshots created by the cmdlet are prefixed with cbt- and end with a GUID.
+       E.G. cbt-78861abc-e46a-4404-921b-5d1458d09127
     #>
-    [CmdletBinding()]
-    Param
-    (
-        # Name of the virtual machines.
+    [CmdletBinding(PositionalBinding=$true,SupportsShouldProcess=$true)]
+    Param (
+        # Name of the virtual machine(s).
         [Parameter(Mandatory=$true,
                    ValueFromPipeline=$true,
                    ValueFromPipelineByPropertyName=$true,
-                   ValueFromRemainingArguments=$false,
-                   Position=0)]
-        [ValidateNotNull()]
+                   ValueFromRemainingArguments=$false)]
         [ValidateNotNullOrEmpty()]
         [String[]]$Name,
         # Whether to enable or disable change tracking.
         [Parameter(Mandatory=$false,
-                   ValueFromPipeline=$false,
-                   Position=1)]
-        [ValidateNotNull()]
+                   ValueFromPipeline=$false)]
         [ValidateNotNullOrEmpty()]
         [Bool]$ChangeTrackingEnable
     )
 
-    Begin
-    {
-        if(-not (Get-Module vmware.*)){ throw 'PowerCLI 6+ must be installed to use this cmdlet.' }
+    Begin {
         $vmConfig = New-Object VMware.Vim.VirtualMachineConfigSpec
         $vmConfig.ChangeTrackingEnabled = $ChangeTrackingEnable
     }
-    Process
-    {
-        foreach($targetVM in $Name)
-        {
-            try
+    Process {
+        foreach($targetVM in $Name) {
+            if($PSCmdlet.ShouldProcess($targetVM, 'Take snapshot, enable change block tracking, and delete snapshot'))
             {
-                $workingVM = Get-VM -Name $targetVM -ErrorAction Stop | Get-View
-                $workingVM.ReconfigVM($vmConfig)
-                $snapshotName = "cbt-$(Get-Date -Format o)"
-                New-Snapshot -VM $workingVM.Name -Name $snapshotName | Out-Null
-                Get-Snapshot -VM $workingVM.Name -Name $snapshotName | Remove-Snapshot -Confirm:$false
-                if(-not (Get-VM -Name $targetVM | Get-View).Config.ChangeTrackingEnabled -and $ChangeTrackingEnable)
-                {
-                    Write-Warning "Unable to change the change block tracking setting for $targetVM."
+                try {
+                    $workingVM = VMware.VimAutomation.Core\Get-VM -Name $targetVM -ErrorAction Stop | VMware.VimAutomation.Core\Get-View
+                    $workingVM.ReconfigVM($vmConfig)
+                    $snapshotName = 'cbt-{0}' -f [Guid]::NewGuid().Guid
+                    VMware.VimAutomation.Core\New-Snapshot -VM $workingVM.Name -Name $snapshotName | Out-Null
+                    VMware.VimAutomation.Core\Get-Snapshot -VM $workingVM.Name -Name $snapshotName | VMware.VimAutomation.Core\Remove-Snapshot -Confirm:$false
+                    if(-not (Get-VM -Name $targetVM | Get-View).Config.ChangeTrackingEnabled -and $ChangeTrackingEnable) {
+                        Write-Warning "Unable to change the change block tracking setting for $targetVM."
+                    }
                 }
-            }
-            catch
-            {
-                Write-Warning "Could not find the virtual machine $targetVM."
+                catch {
+                    Write-Warning "Could not find the virtual machine $targetVM."
+                }
             }
         }
     }
